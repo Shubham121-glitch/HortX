@@ -9,7 +9,16 @@ export const UserProvider = ({ children }) => {
   const [cart, setCart] = useState(null)
   const [wishlist, setWishlist] = useState(null)
   const [notifications, setNotifications] = useState([])
-  const [darkMode, setDarkMode] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("hortx-dark-mode")
+    return saved === "true"
+  })
+
+  // Apply dark mode to document
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light")
+    localStorage.setItem("hortx-dark-mode", darkMode)
+  }, [darkMode])
 
   useEffect(() => {
     if (localStorage.getItem("accessToken")) {
@@ -48,12 +57,20 @@ export const UserProvider = ({ children }) => {
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    setCart(null)
-    setWishlist(null)
-    setNotifications([])
-    localStorage.removeItem("accessToken")
+  const logout = async () => {
+    try {
+      await axios.get("http://localhost:3000/api/auth/logout", {
+        withCredentials: true
+      })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setUser(null)
+      setCart(null)
+      setWishlist(null)
+      setNotifications([])
+      localStorage.removeItem("accessToken")
+    }
   }
 
   const value = {

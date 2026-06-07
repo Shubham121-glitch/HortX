@@ -3,6 +3,10 @@ import axios from "axios"
 import { useParams } from "react-router-dom"
 import { toast } from "react-toastify"
 import { useUser } from "../../context/userContext"
+import { 
+  ShoppingCart, Heart, Star, Package, ShieldCheck, 
+  Truck, ArrowLeft, ChevronRight, ChevronLeft
+} from "lucide-react"
 import "./ProductDetail.css"
 
 const ProductDetail = () => {
@@ -96,6 +100,11 @@ const ProductDetail = () => {
 
   return (
     <div className="product-page">
+      <div className="product-breadcrumb">
+        <button onClick={() => window.history.back()} className="back-btn">
+          <ArrowLeft size={16} /> Back
+        </button>
+      </div>
       <div className="product-container">
         <div className="product-main">
           <div className="product-images">
@@ -112,10 +121,16 @@ const ProductDetail = () => {
           <div className="product-details">
             <h1>{product.name}</h1>
             <div className="rating">
-              <span className="stars">
-                {"⭐".repeat(Math.round(avgRating))}
-                {"☆".repeat(5 - Math.round(avgRating))}
-              </span>
+              <div className="stars">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star 
+                    key={star} 
+                    size={18} 
+                    fill={star <= Math.round(avgRating) ? "currentColor" : "none"}
+                    className={star <= Math.round(avgRating) ? "star-filled" : "star-empty"}
+                  />
+                ))}
+              </div>
               <span className="rating-text">
                 {avgRating} ({reviews.length} reviews)
               </span>
@@ -134,11 +149,37 @@ const ProductDetail = () => {
                 onClick={handleAddToCart}
                 disabled={product.stock === 0}
               >
-                {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                <ShoppingCart size={20} />
+                <span>{product.stock === 0 ? "Out of Stock" : "Add to Cart"}</span>
               </button>
               <button className="add-to-wishlist" onClick={handleAddToWishlist}>
-                ❤️ Add to Wishlist
+                <Heart size={20} />
+                <span>Wishlist</span>
               </button>
+            </div>
+
+            <div className="product-features">
+              <div className="feature-item">
+                <Truck size={20} className="feature-icon" />
+                <div className="feature-text">
+                  <h5>Fast Delivery</h5>
+                  <p>In 2-3 business days</p>
+                </div>
+              </div>
+              <div className="feature-item">
+                <ShieldCheck size={20} className="feature-icon" />
+                <div className="feature-text">
+                  <h5>Secure Transaction</h5>
+                  <p>100% encrypted payment</p>
+                </div>
+              </div>
+              <div className="feature-item">
+                <Package size={20} className="feature-icon" />
+                <div className="feature-text">
+                  <h5>Quality Packaging</h5>
+                  <p>Safe and eco-friendly</p>
+                </div>
+              </div>
             </div>
 
             <div className="vendor-info">
@@ -184,10 +225,16 @@ const ProductDetail = () => {
                 <div key={review._id} className="review-card">
                   <div className="review-header">
                     <span className="reviewer">{review.user?.username}</span>
-                    <span className="review-stars">
-                      {"⭐".repeat(review.rating)}
-                      {"☆".repeat(5 - review.rating)}
-                    </span>
+                    <div className="review-stars">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star 
+                          key={star} 
+                          size={14} 
+                          fill={star <= review.rating ? "currentColor" : "none"}
+                          className={star <= review.rating ? "star-filled" : "star-empty"}
+                        />
+                      ))}
+                    </div>
                   </div>
                   <p className="review-comment">{review.comment}</p>
                   <span className="review-date">

@@ -1,16 +1,27 @@
-import React, { useState, useEffect } from "react"
+import React, { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import { toast } from "react-toastify"
+import { useUser } from "../../context/userContext"
+import { 
+  Package, Truck, ArrowRight, Box, CheckCircle, 
+  Clock, XCircle, MapPin
+} from "lucide-react"
 import "./Orders.css"
 
 const Orders = () => {
+  const { user } = useUser()
+  const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
-  const [expandedOrder, setExpandedOrder] = useState(null)
 
   useEffect(() => {
-    fetchOrders()
-  }, [])
+    if (!user) {
+      navigate("/login")
+    } else {
+      fetchOrders()
+    }
+  }, [user, navigate])
 
   const fetchOrders = async () => {
     try {
@@ -19,105 +30,148 @@ const Orders = () => {
       })
       setOrders(res.data.orders)
     } catch (err) {
-      console.error(err)
       toast.error("Failed to fetch orders")
     } finally {
       setLoading(false)
     }
   }
 
-  const getStatusBadgeClass = (status) => {
-    const classes = {
-      "Pending": "status-pending",
-      "Processing": "status-processing",
-      "Shipped": "status-shipped",
-      "Out for Delivery": "status-out-for-delivery",
-      "Delivered": "status-delivered",
-      "Cancelled": "status-cancelled"
+  const getStatusIcon = (status) => {
+    if (!status) return <Package size={20} className="status-icon pending" />
+    switch (status) {
+      case "Pending": return <Clock size={20} className="status-icon pending" />
+      case "Processing": return <Box size={20} className="status-icon processing" />
+      case "Shipped": return <Truck size={20} className="status-icon shipped" />
+      case "Delivered": return <CheckCircle size={20} className="status-icon delivered" />
+      case "Cancelled": return <XCircle size={20} className="status-icon cancelled" />
+      default: return <Package size={20} className="status-icon" />
     }
-    return classes[status] || "status-pending"
   }
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading orders...</p>
-      </div>
-    )
+  const getStatusClass = (status) => {
+    if (!status) return "status-badge status-pending"
+    return `status-badge status-${status.toLowerCase().replace(/ /g, '-')}`
   }
+
+  const getOverallStatus = (items) => {
+    if (!items || items.length === 0) return "Pending"
+    const statuses = items.map(i => i.status)
+    if (statuses.includes("Pending")) return "Pending"
+    if (statuses.includes("Processing")) return "Processing"
+    if (statuses.includes("Shipped")) return "Shipped"
+    if (statuses.includes("Out for Delivery")) return "Out for Delivery"
+    if (statuses.every(s => s === "Delivered")) return "Delivered"
+    if (statuses.every(s => s === "Cancelled")) return "Cancelled"
+    return statuses[0] || "Pending"
+  }
+
+  if (loading) return (
+    <div className="page-loading">
+      <div className="loading-spinner large"></div>
+    </div>
+  )
 
   return (
     <div className="orders-page">
       <div className="orders-container">
-        <h1>Your Orders</h1>
-        
+        <h1 className="page-title">
+          <Package className="title-icon" />
+          My Orders
+        </h1>
+
         {orders.length === 0 ? (
-          <div className="no-orders">
+          <div className="empty-orders">
+            <div className="empty-icon-wrapper">
+              <Package size={60} />
+            </div>
             <h2>No orders yet</h2>
-            <p>Start shopping to place your first order!</p>
+            <p>You haven't placed any orders yet. Start exploring our natural products!</p>
+            <button className="shop-now-btn" onClick={() => navigate("/")}>
+              <span>Start Shopping</span>
+              <ArrowRight size={18} />
+            </button>
           </div>
         ) : (
           <div className="orders-list">
             {orders.map((order) => (
               <div key={order._id} className="order-card">
                 <div className="order-header">
-                  <div className="order-info">
-                    <span className="order-id">Order #{order._id.slice(-8)}</span>
-                    <span className="order-date">{new Date(order.createdAt).toLocaleDateString()}</span>
+                  <div className="order-meta">
+                    <div className="order-id-group">
+                      <span className="order-label">Order ID</span>
+                      <span className="order-id">#{order._id.substring(order._id.length - 8).toUpperCase()}</span>
+                    </div>
+                    <div className="order-date-group">
+                      <span className="order-label">Placed On</span>
+                      <span className="order-date">{new Date(order.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                      })}</span>
+                    </div>
                   </div>
-                  <div className="order-total">Total: ₹{order.totalAmount}</div>
+                  <div className="order-status-group">
+                    {getStatusIcon(getOverallStatus(order.items))}
+                    <span className={getStatusClass(getOverallStatus(order.items))}>{getOverallStatus(order.items)}</span>
+                  </div>
                 </div>
-                
+
                 <div className="order-items">
-                  {order.items.map((item) => (
-                    <div key={item._id} className="order-item">
+                  {order.items.map((item, index) => (
+                    <div key={index} className="order-item">
                       <img 
-                        src={`http://localhost:3000${item.product?.images[0]}`}
-                        alt={item.product?.name}
-                        className="product-image"
+                        src={`http://localhost:3000${item.product.images[0]}`} 
+                        alt={item.product.name}
+                        onClick={() => navigate(`/product/${item.product._id}`)}
                       />
                       <div className="item-details">
-                        <h4>{item.product?.name}</h4>
-                        <p>Price: ₹{item.price} × {item.quantity}</p>
-                        <p className="item-total">Item Total: ₹{item.price * item.quantity}</p>
-                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
-                          {item.status}
-                        </span>
+                        <h4 onClick={() => navigate(`/product/${item.product._id}`)}>
+                          {item.product.name}
+                        </h4>
+                        <p className="item-vendor">Sold by: {item.vendor.username}</p>
+                        <div className="item-price-qty">
+                          <span className="qty">Qty: {item.quantity}</span>
+                          <span className={getStatusClass(item.status)} style={{ fontSize: '0.75rem', padding: '2px 8px' }}>
+                            {item.status}
+                          </span>
+                          <span className="price">₹{item.price}</span>
+                        </div>
                       </div>
-                      <button 
-                        className="toggle-tracking-btn"
-                        onClick={() => setExpandedOrder(expandedOrder === item._id ? null : item._id)}
-                      >
-                        {expandedOrder === item._id ? "Hide Tracking" : "Track Order"}
-                      </button>
                     </div>
                   ))}
                 </div>
 
-                {order.items.some(item => item._id === expandedOrder) && (
-                  <div className="tracking-section">
-                    {(() => {
-                      const item = order.items.find(i => i._id === expandedOrder)
-                      return item?.trackingHistory?.length > 0 ? (
-                        <div className="tracking-timeline">
-                          <h3>Tracking History</h3>
-                          {[...item.trackingHistory].reverse().map((tracking, index) => (
-                            <div key={index} className="tracking-event">
-                              <div className="tracking-dot"></div>
-                              <div className="tracking-info">
-                                <p className="tracking-status">{tracking.status}</p>
-                                <p className="tracking-description">{tracking.description}</p>
-                                {tracking.location && <p className="tracking-location">📍 {tracking.location}</p>}
-                                <p className="tracking-date">{new Date(tracking.timestamp).toLocaleString()}</p>
-                              </div>
-                            </div>
-                          ))}
+                <div className="order-footer">
+                  <div className="shipping-info">
+                    <MapPin size={16} />
+                    <p>{order.shippingAddress}</p>
+                  </div>
+                  <div className="order-total-group">
+                    <span className="total-label">Total Amount</span>
+                    <span className="total-amount">₹{order.totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {order.tracking && order.tracking.length > 0 && (
+                  <div className="order-tracking">
+                    <h4>Tracking History</h4>
+                    <div className="tracking-timeline">
+                      {order.tracking.map((track, idx) => (
+                        <div key={idx} className="tracking-event">
+                          <div className="tracking-dot"></div>
+                          <div className="tracking-content">
+                            <p className="track-status">{track.status}</p>
+                            <p className="track-desc">{track.description}</p>
+                            {track.location && (
+                              <p className="track-loc">
+                                <MapPin size={12} /> {track.location}
+                              </p>
+                            )}
+                            <p className="track-time">
+                              {new Date(track.timestamp).toLocaleString()}
+                            </p>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="no-tracking">No tracking information available yet</div>
-                      )
-                    })()}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

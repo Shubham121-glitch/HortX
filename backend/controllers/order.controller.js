@@ -124,7 +124,7 @@ export const updateOrderItemStatus = async (req, res) => {
     if (!vendorId) return res.status(401).json({ message: "Unauthorized" });
 
     const { orderId, itemId } = req.params;
-    const { status, location } = req.body;
+    const { status, location, description } = req.body;
 
     const order = await orderModel.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });

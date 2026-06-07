@@ -3,6 +3,10 @@ import axios from "axios"
 import { toast } from "react-toastify"
 import { useUser } from "../../context/userContext"
 import { useNavigate } from "react-router-dom"
+import { 
+  Package, LayoutDashboard, ShoppingBag, DollarSign, Plus, X, 
+  Trash2, MapPin, Edit, TrendingUp, Users, ShoppingCart
+} from "lucide-react"
 import "./VendorDashboard.css"
 
 const VendorDashboard = () => {
@@ -182,7 +186,8 @@ const VendorDashboard = () => {
               className="add-product-btn"
               onClick={() => setShowUploadForm(!showUploadForm)}
             >
-              + Add Product
+              <Plus size={18} />
+              <span>Add Product</span>
             </button>
           )}
         </div>
@@ -193,19 +198,22 @@ const VendorDashboard = () => {
           className={`dashboard-tab ${activeTab === "overview" ? "active" : ""}`}
           onClick={() => setActiveTab("overview")}
         >
-          Overview
+          <LayoutDashboard size={18} />
+          <span>Overview</span>
         </button>
         <button 
           className={`dashboard-tab ${activeTab === "products" ? "active" : ""}`}
           onClick={() => setActiveTab("products")}
         >
-          Products
+          <ShoppingBag size={18} />
+          <span>Products</span>
         </button>
         <button 
           className={`dashboard-tab ${activeTab === "orders" ? "active" : ""}`}
           onClick={() => setActiveTab("orders")}
         >
-          Orders
+          <Package size={18} />
+          <span>Orders</span>
         </button>
       </div>
 
@@ -213,28 +221,28 @@ const VendorDashboard = () => {
         <div className="overview-section">
           <div className="analytics-grid">
             <div className="stat-card revenue">
-              <div className="stat-icon">₹</div>
+              <div className="stat-icon"><DollarSign size={24} /></div>
               <div className="stat-content">
                 <p className="stat-value">₹{analytics.totalRevenue?.toFixed(2) || 0}</p>
                 <p className="stat-label">Total Revenue</p>
               </div>
             </div>
             <div className="stat-card orders">
-              <div className="stat-icon">📦</div>
+              <div className="stat-icon"><Package size={24} /></div>
               <div className="stat-content">
                 <p className="stat-value">{analytics.totalOrders || 0}</p>
                 <p className="stat-label">Total Orders</p>
               </div>
             </div>
             <div className="stat-card items">
-              <div className="stat-icon">🛒</div>
+              <div className="stat-icon"><ShoppingCart size={24} /></div>
               <div className="stat-content">
                 <p className="stat-value">{analytics.totalItemsSold || 0}</p>
                 <p className="stat-label">Items Sold</p>
               </div>
             </div>
             <div className="stat-card products">
-              <div className="stat-icon">🏷️</div>
+              <div className="stat-icon"><ShoppingBag size={24} /></div>
               <div className="stat-content">
                 <p className="stat-value">{analytics.totalProducts || 0}</p>
                 <p className="stat-label">Total Products</p>
@@ -274,7 +282,7 @@ const VendorDashboard = () => {
                     className="close-btn"
                     onClick={() => setShowUploadForm(false)}
                   >
-                    ✕
+                    <X size={20} />
                   </button>
                 </div>
                 <form onSubmit={handleSubmit} className="product-form">
@@ -395,7 +403,8 @@ const VendorDashboard = () => {
                       className="delete-product-btn"
                       onClick={() => handleDeleteProduct(product._id)}
                     >
-                      Delete Product
+                      <Trash2 size={16} />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>
@@ -495,7 +504,7 @@ const VendorDashboard = () => {
                                     <div className="tracking-info">
                                       <p className="tracking-status">{tracking.status}</p>
                                       <p className="tracking-description">{tracking.description}</p>
-                                      {tracking.location && <p className="tracking-location">📍 {tracking.location}</p>}
+                                      {tracking.location && <p className="tracking-location"><MapPin size={14} className="inline-icon" /> {tracking.location}</p>}
                                       <p className="tracking-date">{new Date(tracking.timestamp).toLocaleString()}</p>
                                     </div>
                                   </div>

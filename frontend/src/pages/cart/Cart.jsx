@@ -1,193 +1,238 @@
-import React, { useState } from "react"
-import axios from "axios"
+import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import axios from "axios"
 import { toast } from "react-toastify"
 import { useUser } from "../../context/userContext"
+import { 
+  Trash2, Plus, Minus, ShoppingBag, ArrowRight, 
+  Leaf, Truck, ShieldCheck, ChevronRight
+} from "lucide-react"
 import "./Cart.css"
 
 const Cart = () => {
-  const { cart, setCart, user } = useUser()
+  const { cart, setCart, user, fetchUserData } = useUser()
   const navigate = useNavigate()
-  const [checkout, setCheckout] = useState(false)
-  const [shippingInfo, setShippingInfo] = useState({
-    state: "",
-    district: "",
-    tehsil: "",
-    pin: "",
-    contactNumber: ""
-  })
+  const [loading, setLoading] = useState(true)
+  const [checkingOut, setCheckingOut] = useState(false)
+  const [address, setAddress] = useState("")
 
-  const handleUpdateQuantity = async (itemId, quantity) => {
-    if (quantity < 1) return
+  useEffect(() => {
+    if (!user) {
+      navigate("/login")
+    } else {
+      setLoading(false)
+      if (user.address) {
+        setAddress(`${user.address.state}, ${user.address.district}, ${user.address.tehsil}, ${user.address.pin}`)
+      }
+    }
+  }, [user, navigate])
+
+  const handleUpdateQuantity = async (productId, newQuantity) => {
+    if (newQuantity < 1) return
     try {
-      const res = await axios.put(`http://localhost:3000/api/cart/update/${itemId}`, { quantity }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-      })
+      const res = await axios.post("http://localhost:3000/api/cart/update", 
+        { productId, quantity: newQuantity },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }}
+      )
       setCart(res.data.cart)
     } catch (err) {
-      console.error(err)
-      toast.error("Failed to update cart")
+      toast.error(err.response?.data?.message || "Failed to update quantity")
     }
   }
 
-  const handleRemoveItem = async (itemId) => {
+  const handleRemoveItem = async (productId) => {
     try {
-      const res = await axios.delete(`http://localhost:3000/api/cart/remove/${itemId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-      })
+      const res = await axios.post("http://localhost:3000/api/cart/remove", 
+        { productId },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }}
+      )
       setCart(res.data.cart)
       toast.success("Item removed from cart")
     } catch (err) {
-      console.error(err)
       toast.error("Failed to remove item")
     }
   }
 
-  const handleCheckout = async (e) => {
-    e.preventDefault()
+  const handleCheckout = async () => {
+    if (!address) {
+      return toast.error("Please provide a shipping address")
+    }
     try {
-      await axios.post("http://localhost:3000/api/orders/create", {
-        shippingAddress: shippingInfo,
-        paymentMethod: "Credit Card"
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
-      })
-      toast.success("Order placed successfully!")
-      setCart({ ...cart, items: [] })
+      setCheckingOut(true)
+      const res = await axios.post("http://localhost:3000/api/orders/checkout",
+        { shippingAddress: address },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }}
+      )
+      toast.success(res.data.message || "Order placed successfully! 🌿")
+      await fetchUserData() // Refresh user data to get updated cart
       navigate("/orders")
     } catch (err) {
-      console.error(err)
-      toast.error("Failed to place order")
+      toast.error(err.response?.data?.message || "Checkout failed")
+    } finally {
+      setCheckingOut(false)
     }
   }
 
-  const calculateTotal = () => {
-    if (!cart || !cart.items) return 0
-    return cart.items.reduce((total, item) => {
-      return total + item.product.price * item.quantity
-    }, 0)
-  }
+  if (loading) return (
+    <div className="page-loading">
+      <div className="loading-spinner large"></div>
+    </div>
+  )
 
-  if (!cart) {
-    return <div className="loading">Loading cart...</div>
-  }
-
-  if (!checkout && (!cart.items || cart.items.length === 0)) {
-    return (
-      <div className="empty-cart">
-        <h2>Your cart is empty</h2>
-        <p>Start shopping to add items</p>
-        <button onClick={() => navigate("/shop")}>Go Shopping</button>
-      </div>
-    )
-  }
+  const cartItems = cart?.items || []
+  const subtotal = cart?.totalPrice || 0
+  const shipping = subtotal > 500 ? 0 : 50
+  const total = subtotal + (cartItems.length > 0 ? shipping : 0)
 
   return (
     <div className="cart-page">
       <div className="cart-container">
-        {checkout ? (
-          <div className="checkout">
-            <h2>Checkout</h2>
-            <form onSubmit={handleCheckout}>
-              <div className="form-group">
-                <label>State</label>
-                <input
-                  required
-                  value={shippingInfo.state}
-                  onChange={(e) => setShippingInfo({ ...shippingInfo, state: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label>District</label>
-                <input
-                  required
-                  value={shippingInfo.district}
-                  onChange={(e) => setShippingInfo({ ...shippingInfo, district: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label>Tehsil</label>
-                <input
-                  required
-                  value={shippingInfo.tehsil}
-                  onChange={(e) => setShippingInfo({ ...shippingInfo, tehsil: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label>PIN Code</label>
-                <input
-                  required
-                  value={shippingInfo.pin}
-                  onChange={(e) => setShippingInfo({ ...shippingInfo, pin: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label>Contact Number</label>
-                <input
-                  required
-                  value={shippingInfo.contactNumber}
-                  onChange={(e) => setShippingInfo({ ...shippingInfo, contactNumber: e.target.value })}
-                />
-              </div>
+        <h1 className="page-title">
+          <ShoppingBag className="title-icon" />
+          Your Cart
+        </h1>
 
-              <div className="order-summary">
-                <h3>Order Summary</h3>
-                <div className="summary-item">
-                  <span>Total:</span>
-                  <span className="total">₹{calculateTotal()}</span>
-                </div>
-              </div>
-
-              <div className="checkout-actions">
-                <button type="button" onClick={() => setCheckout(false)}>Back</button>
-                <button type="submit">Place Order</button>
-              </div>
-            </form>
+        {cartItems.length === 0 ? (
+          <div className="empty-cart">
+            <div className="empty-icon-wrapper">
+              <Leaf size={60} />
+            </div>
+            <h2>Your cart is looking a little empty</h2>
+            <p>Add some fresh organic products to your cart and they will show up here.</p>
+            <button className="continue-shopping-btn" onClick={() => navigate("/")}>
+              <span>Start Shopping</span>
+              <ArrowRight size={18} />
+            </button>
           </div>
         ) : (
-          <>
-            <div className="cart-items">
-              <h2>Your Cart</h2>
-              {cart.items.map((item) => (
-                <div key={item._id} className="cart-item">
-                  <img 
-                    src={`http://localhost:3000${item.product.images[0]}`} 
-                    alt={item.product.name}
-                  />
-                  <div className="item-info">
-                    <h3>{item.product.name}</h3>
-                    <p className="price">₹{item.product.price}</p>
+          <div className="cart-layout">
+            <div className="cart-items-section">
+              <div className="cart-header">
+                <span>Product</span>
+                <span>Quantity</span>
+                <span>Total</span>
+              </div>
+              
+              <div className="cart-items">
+                {cartItems.map((item) => (
+                  <div key={item.product._id} className="cart-item">
+                    <div className="item-main">
+                      <img 
+                        src={`http://localhost:3000${item.product.images[0]}`} 
+                        alt={item.product.name} 
+                        className="item-image"
+                        onClick={() => navigate(`/product/${item.product._id}`)}
+                      />
+                      <div className="item-details">
+                        <span className="item-category">{item.product.category}</span>
+                        <h3 onClick={() => navigate(`/product/${item.product._id}`)}>
+                          {item.product.name}
+                        </h3>
+                        <p className="item-price">₹{item.product.price}</p>
+                      </div>
+                    </div>
+
+                    <div className="item-quantity-wrapper">
+                      <div className="quantity-controls">
+                        <button 
+                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span>{item.quantity}</span>
+                        <button 
+                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
+                          disabled={item.quantity >= item.product.stock}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      <button 
+                        className="remove-item-btn"
+                        onClick={() => handleRemoveItem(item.product._id)}
+                      >
+                        <Trash2 size={16} />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+
+                    <div className="item-total">
+                      ₹{item.product.price * item.quantity}
+                    </div>
                   </div>
-                  <div className="quantity">
-                    <button onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}>-</button>
-                    <span>{item.quantity}</span>
-                    <button onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}>+</button>
-                  </div>
-                  <div className="item-total">₹{item.product.price * item.quantity}</div>
-                  <button 
-                    className="remove"
-                    onClick={() => handleRemoveItem(item._id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            <div className="cart-summary">
-              <h3>Order Summary</h3>
-              <div className="summary-item">
-                <span>Total:</span>
-                <span className="total">₹{calculateTotal()}</span>
+            <div className="cart-summary-section">
+              <div className="summary-card">
+                <h3>Order Summary</h3>
+                
+                <div className="summary-row">
+                  <span>Subtotal ({cartItems.length} items)</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                
+                <div className="summary-row">
+                  <span>Shipping Estimate</span>
+                  <span>{shipping === 0 ? "Free" : `₹${shipping.toFixed(2)}`}</span>
+                </div>
+                
+                {shipping > 0 && (
+                  <div className="shipping-notice">
+                    Add ₹{(500 - subtotal).toFixed(2)} more for free shipping!
+                  </div>
+                )}
+                
+                <div className="summary-divider"></div>
+                
+                <div className="summary-row total">
+                  <span>Total</span>
+                  <span>₹{total.toFixed(2)}</span>
+                </div>
+
+                <div className="shipping-address-input">
+                  <label>Shipping Address</label>
+                  <textarea 
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Enter your full shipping address..."
+                    rows="3"
+                  />
+                </div>
+
+                <button 
+                  className="checkout-btn"
+                  onClick={handleCheckout}
+                  disabled={checkingOut || cartItems.length === 0}
+                >
+                  {checkingOut ? (
+                    <div className="btn-loading">
+                      <div className="loading-spinner small"></div>
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span>Proceed to Checkout</span>
+                      <ChevronRight size={18} />
+                    </>
+                  )}
+                </button>
+
+                <div className="trust-badges">
+                  <div className="trust-badge">
+                    <ShieldCheck size={16} />
+                    <span>Secure Checkout</span>
+                  </div>
+                  <div className="trust-badge">
+                    <Truck size={16} />
+                    <span>Fast Delivery</span>
+                  </div>
+                </div>
               </div>
-              <button 
-                className="checkout-btn"
-                onClick={() => setCheckout(true)}
-              >
-                Proceed to Checkout
-              </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

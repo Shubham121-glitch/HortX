@@ -18,7 +18,6 @@ authRouter.get("/refresh-token", refreshToken)
 authRouter.get("/logout", logout)
 
 // Logout from all devices GET api/auth/logout-all
-authRouter.get("/logout-all", logout)
 
 // Login POST api/auth/login
 authRouter.post("/login", login)
